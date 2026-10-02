@@ -211,6 +211,19 @@ tempCodeRunnerFile.py
 
 # Marimo
 marimo/_static/
+
+# Data and checkpoints
+data/raw/*
+data/processed/*
+models/saved_weights/*
+
+# Python & Environment
+__pycache__/
+*.pyc
+.venv/
+env/
+.ipynb_checkpoints/
+.env
 marimo/_lsp/
 __marimo__/
 
