@@ -1,4 +1,4 @@
-# 🌿 Real-Time Endangered Species & Threat Detection from Rainforest Audio (SDG 15)
+# 🌿 EcoAST: Real-Time Endangered Species & Threat Detection from Rainforest Audio (SDG 15)
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
