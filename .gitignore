@@ -2,7 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+trained_models/
 # C extensions
 *.so
 dataset/FSD50K.dev_audio
@@ -229,3 +229,4 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+trained_models/
