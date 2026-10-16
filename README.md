@@ -18,6 +18,13 @@ This project supports **UN Sustainable Development Goal 15: Life on Land**.
 
 ---
 
+
+
+## Trained model links
+<a href="https://drive.google.com/drive/folders/1stzPrd-3p-bQXTVcSlXFV1bTPMGbNJvj?usp=drive_link" target="_blank">
+  <img src="https://img.shields.io/badge/Google%20Drive-View%20Files-blue?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive"/>
+</a>
+
 ## Table of Contents
 
 1. [Project Overview](#-project-overview)
