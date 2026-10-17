@@ -230,3 +230,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 trained_models/
+data/
+*.wav
