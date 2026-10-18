@@ -1,310 +1,342 @@
-import glob
-import os
+"""
+pre_processing_pipeline.py
+Dedicated 16x16 AST Pipeline for 7-Class Forest Acoustic Threat Detection.
+Built for easy import into Jupyter Notebooks.
+Supports both raw FSD50K and pre-split shared dataset directories.
+"""
 
+import random
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
-import soundfile as sf
 import torch
+import torch.nn.functional as F
 import torchaudio
 import torchaudio.transforms as T
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
-from transformers import ASTFeatureExtractor
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
+from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 
-# --- CONFIGURATION CONSTANTS ---
-DEFAULT_TARGET_SR = 16000
-DEFAULT_DURATION_SEC = 10
-DEFAULT_TARGET_SAMPLES = DEFAULT_TARGET_SR * DEFAULT_DURATION_SEC  # 160,000 samples
+# =====================================================================
+# CONFIGURATION & 7-CLASS TAXONOMY
+# =====================================================================
+SEED = 42
+SAMPLE_RATE = 16000
+NUM_MEL_BINS = 128
+TARGET_DURATION = 10.24  # Required for AST 1024 frames
 
-TARGET_CLASSES = ["chainsaw", "gunshot", "engine", "background"]
+CLASS_TO_IDX = {
+    "Background_Nature": 0,
+    "Sawing_and_Chainsaw": 1,
+    "Gunshot_and_Explosion": 2,
+    "Engine_and_Vehicle": 3,
+    "Wood_Chop_and_Break": 4,
+    "Human_Vocalization": 5,
+    "Dog_Bark": 6,
+}
+IDX_TO_CLASS = {v: k for k, v in CLASS_TO_IDX.items()}
+NUM_CLASSES = len(CLASS_TO_IDX)
+
+# Exact FSD50K vocabulary strings
+FSD50K_EXACT_LABELS = {
+    "Sawing_and_Chainsaw": {"Sawing", "Chainsaw"},
+    "Gunshot_and_Explosion": {
+        "Gunshot_and_gunfire",
+        "Explosion",
+        "Artillery_fire",
+        "Machine_gun",
+        "Fusillade",
+    },
+    "Engine_and_Vehicle": {
+        "Engine",
+        "Idling",
+        "Accelerating_and_revving_and_vroom",
+        "Medium_engine_(mid_frequency)",
+        "Heavy_engine_(low_frequency)",
+        "Light_engine_(high_frequency)",
+        "Motor_vehicle_(road)",
+        "Truck",
+        "Motorcycle",
+    },
+    "Wood_Chop_and_Break": {"Chop", "Wood", "Crack", "Splinter", "Whack_and_thwack"},
+    "Human_Vocalization": {
+        "Speech",
+        "Male_speech_and_man_speaking",
+        "Female_speech_and_woman_speaking",
+        "Conversation",
+        "Shout",
+        "Screaming",
+        "Yell",
+    },
+    "Dog_Bark": {"Bark", "Dog", "Growling", "Howl", "Yip"},
+    "Background_Nature": {
+        "Bird",
+        "Bird_vocalization_and_bird_call_and_bird_song",
+        "Frog",
+        "Insect",
+        "Rain",
+        "Thunder",
+        "Wind",
+        "Rustling_leaves",
+        "Stream",
+    },
+}
+
+
+def set_seed(seed: int = SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 # =====================================================================
-# 1. AUDIO STANDARDIZATION & SPLITTING FUNCTIONS
+# DATASET LOADING FUNCTIONS
 # =====================================================================
-
-
-def standardize_audio(
-    input_path: str,
-    output_path: str,
-    target_sr: int = DEFAULT_TARGET_SR,
-    target_duration_sec: int = DEFAULT_DURATION_SEC,
-) -> bool:
+def load_dataset_splits(
+    dataset_dir: str, metadata_file: str = "dataset_metadata.csv"
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Standardizes raw input audio into 16 kHz Mono WAV format (160,000 samples).
-    Uses soundfile directly as a fallback if torchaudio load fails.
+    Loads pre-split dataset from a shared directory containing audio/ and dataset_metadata.csv.
+    Use this when working with the exported/shared dataset zip.
     """
-    try:
-        try:
-            waveform, sr = torchaudio.load(input_path)
-        except Exception:
-            data, sr = sf.read(input_path, dtype="float32")
-            waveform = torch.from_numpy(data)
-            if waveform.ndim == 1:
-                waveform = waveform.unsqueeze(0)
-            else:
-                waveform = waveform.T
+    root_path = Path(dataset_dir)
+    csv_path = root_path / metadata_file
+    audio_dir = root_path / "audio"
 
-        target_length = target_sr * target_duration_sec
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Metadata file not found at: {csv_path}")
+    if not audio_dir.exists():
+        raise FileNotFoundError(f"Audio directory not found at: {audio_dir}")
 
-        # Downmix Stereo to Mono
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
+    df = pd.read_csv(csv_path)
 
-        # Resample to 16 kHz
-        if sr != target_sr:
-            resampler = T.Resample(orig_freq=sr, new_freq=target_sr)
-            waveform = resampler(waveform)
+    # Reconstruct the absolute path required by FastStrideASTDataset
+    df["filepath"] = df["filename"].apply(lambda fname: str(audio_dir / fname))
 
-        # Pad or Truncate to 10 seconds
-        current_samples = waveform.shape[-1]
-        if current_samples < target_length:
-            padding = target_length - current_samples
-            waveform = torch.nn.functional.pad(waveform, (0, padding))
-        else:
-            waveform = waveform[:, :target_length]
+    # Verify that files are present
+    missing_files = [fp for fp in df["filepath"] if not Path(fp).exists()]
+    if missing_files:
+        raise FileNotFoundError(
+            f"{len(missing_files)} audio files specified in metadata are missing on disk."
+        )
 
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        torchaudio.save(output_path, waveform, target_sr)
-        return True
-    except Exception as e:
-        print(f"\n[Error processing '{input_path}']: {e}")
-        return False
+    train_df = df[df["split"] == "train"].reset_index(drop=True)
+    val_df = df[df["split"] == "val"].reset_index(drop=True)
+    test_df = df[df["split"] == "test"].reset_index(drop=True)
+
+    return train_df, val_df, test_df
 
 
-def split_records(
-    records: list,
-    train_ratio: float = 0.70,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    random_seed: int = 42,
-):
-    assert abs((train_ratio + val_ratio + test_ratio) - 1.0) < 1e-5, (
-        "Ratios must sum to 1.0"
-    )
+def resolve_clean_fsd50k_class(raw_labels: set) -> int | None:
+    matched_threats = [
+        cls
+        for cls in FSD50K_EXACT_LABELS
+        if raw_labels.intersection(FSD50K_EXACT_LABELS[cls])
+    ]
 
-    val_plus_test = val_ratio + test_ratio
-    relative_test_ratio = test_ratio / val_plus_test
-
-    train_records, temp_records = train_test_split(
-        records, test_size=val_plus_test, random_state=random_seed
-    )
-    val_records, test_records = train_test_split(
-        temp_records, test_size=relative_test_ratio, random_state=random_seed
-    )
-
-    return train_records, val_records, test_records
+    if set(matched_threats) == {"Sawing_and_Chainsaw", "Engine_and_Vehicle"}:
+        return CLASS_TO_IDX["Sawing_and_Chainsaw"]
+    if len(matched_threats) > 1 and "Background_Nature" not in matched_threats:
+        return None
+    if len(matched_threats) == 1:
+        return CLASS_TO_IDX[matched_threats[0]]
+    if "Domestic_animals_and_pets" in raw_labels:
+        return None
+    if raw_labels.intersection(FSD50K_EXACT_LABELS["Background_Nature"]):
+        return CLASS_TO_IDX["Background_Nature"]
+    return None
 
 
-def _collect_raw_records(
-    dataset_dir: str = "dataset", output_dir: str = "split_dataset"
-):
-    raw_records = []
+def build_dataset_splits(
+    fsd50k_root: str, max_samples_per_class: int = 700
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Parses raw FSD50K CSVs and returns Train, Validation, and Test DataFrames based on available files."""
+    fsd_path = Path(fsd50k_root)
 
-    # Collect Gunshot Audio Files
-    gunshot_dir = os.path.join(dataset_dir, "gunshot")
-    if os.path.exists(gunshot_dir):
-        gunshot_files = glob.glob(
-            os.path.join(gunshot_dir, "**", "*.wav"), recursive=True
-        ) + glob.glob(os.path.join(gunshot_dir, "**", "*.mp3"), recursive=True)
-        for fpath in gunshot_files:
-            fname = os.path.basename(fpath)
-            if not fname.startswith(("gunshot_dataset_", "FSD50K_")):
-                raw_records.append(
-                    {
-                        "raw_path": fpath,
-                        "labels": "gunshot",
-                        "source": "gunshot_dataset",
-                    }
-                )
-
-    # Collect FSD50K Audio Files
-    print("Indexing raw audio files for FSD50K mapping...")
-    search_dirs = [dataset_dir, output_dir]
-    wav_lookup = {}
-    for sdir in search_dirs:
-        if os.path.exists(sdir):
-            for p in glob.glob(os.path.join(sdir, "**", "*.wav"), recursive=True):
-                fname = os.path.basename(p)
-                if not fname.startswith(("gunshot_dataset_", "FSD50K_")):
-                    wav_lookup[fname] = p
-
-    fsd50k_dev_csv = os.path.join(dataset_dir, "FSD50K.ground_truth", "dev.csv")
-    fsd50k_eval_csv = os.path.join(dataset_dir, "FSD50K.ground_truth", "eval.csv")
-
-    for csv_path in [fsd50k_dev_csv, fsd50k_eval_csv]:
-        if os.path.exists(csv_path):
-            df = pd.read_csv(csv_path)
+    def load_split(gt_csv, audio_dir):
+        records = []
+        if gt_csv.exists() and audio_dir.exists():
+            df = pd.read_csv(gt_csv)
             for _, row in df.iterrows():
-                fname = str(row["fname"])
-                if not fname.endswith(".wav"):
-                    fname += ".wav"
+                lbls = {l.strip() for l in str(row["labels"]).split(",")}
+                target_idx = resolve_clean_fsd50k_class(lbls)
+                if target_idx is not None:
+                    wav_path = audio_dir / f"{row['fname']}.wav"
+                    if wav_path.exists():
+                        records.append(
+                            {
+                                "filepath": str(wav_path),
+                                "label": target_idx,
+                                "class_name": IDX_TO_CLASS[target_idx],
+                            }
+                        )
+        return records
 
-                if fname in wav_lookup:
-                    raw_records.append(
-                        {
-                            "raw_path": wav_lookup[fname],
-                            "labels": str(row["labels"]),
-                            "source": "FSD50K",
-                        }
-                    )
-
-    return raw_records
-
-
-def process_and_export_split(
-    records: list, split_name: str, output_dir: str = "split_dataset"
-) -> pd.DataFrame:
-    split_audio_dir = os.path.join(output_dir, split_name)
-    os.makedirs(split_audio_dir, exist_ok=True)
-
-    exported_rows = []
-    print(
-        f"\nStandardizing audio files for split: '{split_name.upper()}' ({len(records)} samples)..."
+    dev_records = load_split(
+        fsd_path / "FSD50K.ground_truth" / "dev.csv", fsd_path / "FSD50K.dev_audio"
+    )
+    eval_records = load_split(
+        fsd_path / "FSD50K.ground_truth" / "eval.csv", fsd_path / "FSD50K.eval_audio"
     )
 
-    for idx, item in enumerate(tqdm(records, desc=f"Processing {split_name}")):
-        out_fname = f"{item['source']}_{split_name}_{idx:05d}.wav"
-        out_path = os.path.join(split_audio_dir, out_fname)
+    full_df = pd.DataFrame(dev_records + eval_records)
+    if full_df.empty:
+        raise ValueError(
+            f"No audio files matched in {fsd50k_root}. Check your path variable."
+        )
 
-        success = standardize_audio(item["raw_path"], out_path)
-        if success:
-            exported_rows.append(
-                {
-                    "fname": out_fname,
-                    "labels": item["labels"],
-                    "source": item["source"],
-                    "file_path": out_path,
-                }
-            )
+    balanced_dfs = []
+    for cls_idx in CLASS_TO_IDX.values():
+        cls_df = full_df[full_df["label"] == cls_idx]
+        if len(cls_df) > max_samples_per_class:
+            cls_df = cls_df.sample(n=max_samples_per_class, random_state=SEED)
+        balanced_dfs.append(cls_df)
+    balanced_df = pd.concat(balanced_dfs, ignore_index=True)
 
-    df_meta = pd.DataFrame(
-        exported_rows, columns=["fname", "labels", "source", "file_path"]
+    # Split 70% Train, 15% Validation, 15% Test
+    train_val, test_df = train_test_split(
+        balanced_df, test_size=0.15, stratify=balanced_df["label"], random_state=SEED
     )
-    csv_out_path = os.path.join(output_dir, f"{split_name}_metadata.csv")
-    df_meta.to_csv(csv_out_path, index=False)
-    print(f"Exported {len(df_meta)} rows to metadata: {csv_out_path}")
-    return df_meta
-
-
-def run_full_pipeline(
-    dataset_dir: str = "dataset",
-    output_dir: str = "split_dataset",
-    train_ratio: float = 0.70,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    seed: int = 42,
-):
-    print("==================================================")
-    print("      EcoAST TRAIN / VAL / TEST PIPELINE          ")
-    print("==================================================")
-
-    raw_records = _collect_raw_records(dataset_dir, output_dir)
-    print(f"Collected total of {len(raw_records)} raw audio records.")
-
-    if not raw_records:
-        raise ValueError("No audio files were found. Please check dataset directories.")
-
-    train_recs, val_recs, test_recs = split_records(
-        raw_records,
-        train_ratio=train_ratio,
-        val_ratio=val_ratio,
-        test_ratio=test_ratio,
-        random_seed=seed,
+    train_df, val_df = train_test_split(
+        train_val,
+        test_size=(0.15 / 0.85),
+        stratify=train_val["label"],
+        random_state=SEED,
     )
 
-    df_train = process_and_export_split(train_recs, "train", output_dir)
-    df_val = process_and_export_split(val_recs, "val", output_dir)
-    df_test = process_and_export_split(test_recs, "test", output_dir)
-
-    print("\n" + "=" * 50)
-    print("             PIPELINE EXPORT COMPLETE             ")
-    print("=" * 50)
-    return df_train, df_val, df_test
+    return (
+        train_df.reset_index(drop=True),
+        val_df.reset_index(drop=True),
+        test_df.reset_index(drop=True),
+    )
 
 
 # =====================================================================
-# 2. PYTORCH DATASET & DATALOADER FACTORY (REUSABLE)
+# PYTORCH DATASET CLASS
 # =====================================================================
+class FastStrideASTDataset(Dataset):
+    def __init__(self, df: pd.DataFrame, feature_extractor, is_train: bool = True):
+        self.df = df
+        self.feature_extractor = feature_extractor
+        self.target_samples = int(TARGET_DURATION * SAMPLE_RATE)
+        self.is_train = is_train
 
-# Inside preprocessing_pipeline.py
-
-
-class ForestThreatDataset(Dataset):
-    """
-    Unified Dataset class that accepts any Hugging Face AST model checkpoint name.
-    """
-
-    def __init__(
-        self,
-        csv_path: str,
-        target_classes: list = TARGET_CLASSES,
-        model_checkpoint: str = "MIT/ast-finetuned-audioset-10-10-0.4593",
-    ):
-        self.df = pd.read_csv(csv_path)
-        self.target_classes = target_classes
-        # Dynamically load the feature extractor matching the chosen model variant
-        self.feature_extractor = ASTFeatureExtractor.from_pretrained(model_checkpoint)
-
-    def _get_multi_hot_label(self, raw_label: str) -> torch.Tensor:
-        multi_hot = torch.zeros(len(self.target_classes), dtype=torch.float32)
-        raw_label_str = str(raw_label).lower()
-
-        # Explicit Priority: Chainsaw > Gunshot > Engine > Background
-        if "chainsaw" in raw_label_str:
-            multi_hot[self.target_classes.index("chainsaw")] = 1.0
-        elif "gunshot" in raw_label_str or "gun" in raw_label_str:
-            multi_hot[self.target_classes.index("gunshot")] = 1.0
-        elif "engine" in raw_label_str:
-            multi_hot[self.target_classes.index("engine")] = 1.0
-        elif "background" in self.target_classes:
-            multi_hot[self.target_classes.index("background")] = 1.0
-
-        return multi_hot
+        self.bg_files = self.df[self.df["label"] == CLASS_TO_IDX["Background_Nature"]][
+            "filepath"
+        ].tolist()
+        self.freq_mask = T.FrequencyMasking(freq_mask_param=20)
+        self.time_mask = T.TimeMasking(time_mask_param=24)
+        self._resamplers = {}
 
     def __len__(self):
         return len(self.df)
 
-    def __getitem__(self, idx):
-        row = self.df.iloc[idx]
-        file_path = row["file_path"]
+    def _load_and_process(self, filepath: str) -> torch.Tensor:
+        waveform, sr = torchaudio.load(filepath)
+        if waveform.shape[0] > 1:
+            waveform = torch.mean(waveform, dim=0, keepdim=True)
+        if sr != SAMPLE_RATE:
+            if sr not in self._resamplers:
+                self._resamplers[sr] = T.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)
+            waveform = self._resamplers[sr](waveform)
 
-        try:
-            waveform, sr = torchaudio.load(file_path)
-        except Exception:
-            data, sr = sf.read(file_path, dtype="float32")
-            waveform = torch.from_numpy(data).unsqueeze(0)
+        waveform = waveform.squeeze(0)
+        num_samples = waveform.shape[0]
+
+        # Smart Energy Crop
+        if num_samples > self.target_samples:
+            chunk_size = 1600
+            num_chunks = num_samples // chunk_size
+            if num_chunks > 1:
+                chunk_energy = (
+                    waveform[: num_chunks * chunk_size]
+                    .view(num_chunks, chunk_size)
+                    .pow(2)
+                    .mean(dim=1)
+                )
+                peak_center = int(torch.argmax(chunk_energy).item()) * chunk_size + (
+                    chunk_size // 2
+                )
+                ideal_start = peak_center - (self.target_samples // 2)
+                if self.is_train:
+                    ideal_start += random.randint(
+                        -int(self.target_samples * 0.2), int(self.target_samples * 0.2)
+                    )
+                start = max(0, min(num_samples - self.target_samples, ideal_start))
+            else:
+                start = 0
+            waveform = waveform[start : start + self.target_samples]
+        elif num_samples < self.target_samples:
+            pad = self.target_samples - num_samples
+            left = random.randint(0, pad) if self.is_train else pad // 2
+            waveform = F.pad(waveform, (left, pad - left), mode="constant", value=0.0)
+
+        # RMS Norm + Pre-emphasis
+        waveform = waveform - waveform.mean()
+        rms = torch.sqrt(torch.mean(waveform.pow(2)) + 1e-8)
+        waveform = torch.tanh(waveform * (0.1 / rms))
+        waveform = torch.cat([waveform[:1], waveform[1:] - 0.97 * waveform[:-1]], dim=0)
+        return waveform
+
+    def __getitem__(self, idx: int):
+        row = self.df.iloc[idx]
+        waveform = self._load_and_process(row["filepath"])
+
+        # Background Mixing
+        if (
+            self.is_train
+            and row["label"] != CLASS_TO_IDX["Background_Nature"]
+            and self.bg_files
+            and random.random() < 0.5
+        ):
+            bg_wave = self._load_and_process(random.choice(self.bg_files))
+            snr = 10 ** (random.uniform(5.0, 20.0) / 20.0)
+            scale = waveform.norm(p=2) / (bg_wave.norm(p=2) * snr + 1e-8)
+            waveform = torch.tanh(waveform + scale * bg_wave)
 
         inputs = self.feature_extractor(
-            waveform.squeeze(0).numpy(), sampling_rate=16000, return_tensors="pt"
+            waveform.numpy(), sampling_rate=SAMPLE_RATE, return_tensors="pt"
         )
+        input_values = inputs["input_values"].squeeze(0)
+
+        if self.is_train and random.random() < 0.5:
+            spec = input_values.transpose(0, 1).unsqueeze(0)
+            spec = self.time_mask(self.freq_mask(spec))
+            input_values = spec.squeeze(0).transpose(0, 1)
 
         return {
-            "input_values": inputs.input_values.squeeze(0),
-            "labels": self._get_multi_hot_label(row["labels"]),
+            "input_values": input_values.float(),
+            "labels": torch.tensor(row["label"], dtype=torch.long),
         }
 
 
-def get_dataloaders(
-    output_dir: str = "split_dataset",
-    batch_size: int = 8,
-    num_workers: int = 0,
-    target_classes: list = TARGET_CLASSES,
-    model_checkpoint: str = "MIT/ast-finetuned-audioset-10-10-0.4593",
-):
-    """
-    Factory function instantiating DataLoaders for any requested AST model backbone.
-    """
-    train_csv = os.path.join(output_dir, "train_metadata.csv")
-    val_csv = os.path.join(output_dir, "val_metadata.csv")
-    test_csv = os.path.join(output_dir, "test_metadata.csv")
+# =====================================================================
+# DATALOADER GENERATOR
+# =====================================================================
+def get_dataloaders(train_df, val_df, test_df, batch_size=16, num_workers=2):
+    """Creates PyTorch DataLoaders with Weighted Random Sampling for training."""
+    extractor = ASTFeatureExtractor.from_pretrained(
+        "MIT/ast-finetuned-audioset-10-10-0.4593"
+    )
 
-    train_ds = ForestThreatDataset(train_csv, target_classes, model_checkpoint)
-    val_ds = ForestThreatDataset(val_csv, target_classes, model_checkpoint)
-    test_ds = ForestThreatDataset(test_csv, target_classes, model_checkpoint)
+    train_ds = FastStrideASTDataset(train_df, extractor, is_train=True)
+    val_ds = FastStrideASTDataset(val_df, extractor, is_train=False)
+    test_ds = FastStrideASTDataset(test_df, extractor, is_train=False)
+
+    weights = [1.0 / train_df["label"].value_counts()[lbl] for lbl in train_df["label"]]
+    sampler = WeightedRandomSampler(
+        weights=torch.DoubleTensor(weights), num_samples=len(train_df), replacement=True
+    )
 
     train_loader = DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers
+        train_ds,
+        batch_size=batch_size,
+        sampler=sampler,
+        num_workers=num_workers,
+        drop_last=True,
     )
     val_loader = DataLoader(
         val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers
@@ -313,8 +345,61 @@ def get_dataloaders(
         test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, test_loader, extractor
 
 
-if __name__ == "__main__":
-    run_full_pipeline()
+# =====================================================================
+# 16x16 FAST STRIDE MODEL BUILDER (CLEANED)
+# =====================================================================
+def build_ast_faststride_16x16_model():
+    """Initializes the AST model with 16x16 non-overlapping patches (514 tokens)."""
+    checkpoint = "MIT/ast-finetuned-audioset-10-10-0.4593"
+    pretrained_model = ASTForAudioClassification.from_pretrained(checkpoint)
+
+    config = ASTConfig.from_pretrained(
+        checkpoint,
+        patch_size=16,
+        frequency_stride=16,
+        time_stride=16,
+        max_length=1024,
+        num_mel_bins=128,
+    )
+
+    # Completely overwrite label mappings to match the 7-class taxonomy
+    config.num_labels = NUM_CLASSES
+    config.id2label = IDX_TO_CLASS
+    config.label2id = CLASS_TO_IDX
+
+    # Delete old cached label attributes if they exist in the config object
+    if hasattr(config, "_name_or_path"):
+        pass
+    config.id2label = IDX_TO_CLASS
+    config.label2id = CLASS_TO_IDX
+
+    model = ASTForAudioClassification(config)
+
+    # Copy weights
+    pretrained_dict = pretrained_model.state_dict()
+    model_dict = model.state_dict()
+    for k, v in pretrained_dict.items():
+        if k in model_dict and v.shape == model_dict[k].shape:
+            model_dict[k] = v
+
+    # Interpolate Positional Embeddings (12x101 -> 8x64)
+    orig_pos = pretrained_dict[
+        "audio_spectrogram_transformer.embeddings.position_embeddings"
+    ]
+    cls_dist = orig_pos[:, :2, :]
+    grid_2d = orig_pos[:, 2:, :].transpose(1, 2).reshape(1, -1, 12, 101)
+
+    interp_grid = F.interpolate(
+        grid_2d, size=(8, 64), mode="bilinear", align_corners=False
+    )
+    interp_tokens = interp_grid.flatten(2).transpose(1, 2)
+
+    model_dict["audio_spectrogram_transformer.embeddings.position_embeddings"] = (
+        torch.cat([cls_dist, interp_tokens], dim=1)
+    )
+    model.load_state_dict(model_dict)
+
+    return model
