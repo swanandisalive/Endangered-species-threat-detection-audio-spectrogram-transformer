@@ -1,0 +1,152 @@
+{
+  "model_name": "ast",
+  "timestamp": "2026-10-20T21:04:24.951974",
+  "test_loss": 0.2660998910168807,
+  "accuracy": 0.925,
+  "mAP": 0.9616151323608164,
+  "per_class_AP": {
+    "Background_Nature": 0.9684386130219254,
+    "Sawing_and_Chainsaw": 0.9160125141742789,
+    "Gunshot_and_Explosion": 0.997525520434321,
+    "Engine_and_Vehicle": 0.9698800670943348,
+    "Wood_Chop_and_Break": 0.9345407159585996,
+    "Human_Vocalization": 0.9654920242268193,
+    "Dog_Bark": 0.9794164716154358
+  },
+  "roc_auc_macro": 0.9931689773224007,
+  "macro_f1": 0.9205144582884733,
+  "weighted_f1": 0.9245475046364625,
+  "macro_f2": 0.9237600776976357,
+  "per_class_f2": {
+    "Background_Nature": 0.916030534351145,
+    "Sawing_and_Chainsaw": 0.9782608695652174,
+    "Gunshot_and_Explosion": 0.9792843691148776,
+    "Engine_and_Vehicle": 0.9021113243761996,
+    "Wood_Chop_and_Break": 0.8127208480565371,
+    "Human_Vocalization": 0.9273422562141491,
+    "Dog_Bark": 0.9505703422053232
+  },
+  "classification_report": {
+    "Background_Nature": {
+      "precision": 0.9230769230769231,
+      "recall": 0.9142857142857143,
+      "f1-score": 0.9186602870813397,
+      "support": 105.0
+    },
+    "Sawing_and_Chainsaw": {
+      "precision": 0.9,
+      "recall": 1.0,
+      "f1-score": 0.9473684210526315,
+      "support": 18.0
+    },
+    "Gunshot_and_Explosion": {
+      "precision": 0.9369369369369369,
+      "recall": 0.9904761904761905,
+      "f1-score": 0.9629629629629629,
+      "support": 105.0
+    },
+    "Engine_and_Vehicle": {
+      "precision": 0.9306930693069307,
+      "recall": 0.8952380952380953,
+      "f1-score": 0.912621359223301,
+      "support": 105.0
+    },
+    "Wood_Chop_and_Break": {
+      "precision": 0.8363636363636363,
+      "recall": 0.8070175438596491,
+      "f1-score": 0.8214285714285714,
+      "support": 57.0
+    },
+    "Human_Vocalization": {
+      "precision": 0.941747572815534,
+      "recall": 0.9238095238095239,
+      "f1-score": 0.9326923076923077,
+      "support": 105.0
+    },
+    "Dog_Bark": {
+      "precision": 0.9433962264150944,
+      "recall": 0.9523809523809523,
+      "f1-score": 0.9478672985781991,
+      "support": 105.0
+    },
+    "accuracy": 0.925,
+    "macro avg": {
+      "precision": 0.9160306235592935,
+      "recall": 0.926172574292875,
+      "f1-score": 0.9205144582884733,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "precision": 0.9247284229510438,
+      "recall": 0.925,
+      "f1-score": 0.9245475046364625,
+      "support": 600.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      96,
+      0,
+      1,
+      3,
+      3,
+      2,
+      0
+    ],
+    [
+      0,
+      18,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      104,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      1,
+      94,
+      4,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      4,
+      3,
+      46,
+      2,
+      0
+    ],
+    [
+      1,
+      0,
+      1,
+      1,
+      1,
+      97,
+      4
+    ],
+    [
+      3,
+      0,
+      0,
+      0,
+      0,
+      2,
+      100
+    ]
+  ],
+  "total_samples": 600
+}

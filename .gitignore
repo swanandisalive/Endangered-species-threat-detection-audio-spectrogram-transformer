@@ -1,13 +1,17 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+/data
+chainsaw.wav
 *.py[codz]
 *$py.class
 trained_models/
 # C extensions
 *.so
+/shared_forest_dataset
 dataset/FSD50K.dev_audio
 # Distribution / packaging
 .Python
+share_split.py
 build/
 develop-eggs/
 dist/
