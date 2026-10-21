@@ -1,0 +1,152 @@
+{
+  "model_name": "effnet",
+  "timestamp": "2026-10-21T13:13:37.554146",
+  "test_loss": 4.338320185343425,
+  "accuracy": 0.24,
+  "mAP": 0.3122491620640991,
+  "per_class_AP": {
+    "Background_Nature": 0.7494354341102196,
+    "Sawing_and_Chainsaw": 0.5351646937063604,
+    "Gunshot_and_Explosion": 0.17726162377126373,
+    "Engine_and_Vehicle": 0.15266859624191337,
+    "Wood_Chop_and_Break": 0.11627754015012076,
+    "Human_Vocalization": 0.19630160630930446,
+    "Dog_Bark": 0.2586346401595112
+  },
+  "roc_auc_macro": 0.6705660235560869,
+  "macro_f1": 0.20435232644690035,
+  "weighted_f1": 0.177613775925759,
+  "macro_f2": 0.23159195221115322,
+  "per_class_f2": {
+    "Background_Nature": 0.7199367088607594,
+    "Sawing_and_Chainsaw": 0.4891304347826087,
+    "Gunshot_and_Explosion": 0.0,
+    "Engine_and_Vehicle": 0.0,
+    "Wood_Chop_and_Break": 0.05172413793103448,
+    "Human_Vocalization": 0.30612244897959184,
+    "Dog_Bark": 0.05422993492407809
+  },
+  "classification_report": {
+    "Background_Nature": {
+      "precision": 0.42924528301886794,
+      "recall": 0.8666666666666667,
+      "f1-score": 0.5741324921135647,
+      "support": 105.0
+    },
+    "Sawing_and_Chainsaw": {
+      "precision": 0.45,
+      "recall": 0.5,
+      "f1-score": 0.47368421052631576,
+      "support": 18.0
+    },
+    "Gunshot_and_Explosion": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 105.0
+    },
+    "Engine_and_Vehicle": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 105.0
+    },
+    "Wood_Chop_and_Break": {
+      "precision": 0.04838709677419355,
+      "recall": 0.05263157894736842,
+      "f1-score": 0.05042016806722689,
+      "support": 57.0
+    },
+    "Human_Vocalization": {
+      "precision": 0.21428571428571427,
+      "recall": 0.34285714285714286,
+      "f1-score": 0.26373626373626374,
+      "support": 105.0
+    },
+    "Dog_Bark": {
+      "precision": 0.12195121951219512,
+      "recall": 0.047619047619047616,
+      "f1-score": 0.0684931506849315,
+      "support": 105.0
+    },
+    "accuracy": 0.24,
+    "macro avg": {
+      "precision": 0.1805527590844244,
+      "recall": 0.2585392051557465,
+      "f1-score": 0.20435232644690035,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "precision": 0.15205616213648446,
+      "recall": 0.24,
+      "f1-score": 0.177613775925759,
+      "support": 600.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      91,
+      0,
+      0,
+      1,
+      1,
+      11,
+      1
+    ],
+    [
+      0,
+      9,
+      3,
+      1,
+      1,
+      4,
+      0
+    ],
+    [
+      25,
+      2,
+      0,
+      0,
+      55,
+      23,
+      0
+    ],
+    [
+      45,
+      7,
+      31,
+      0,
+      1,
+      21,
+      0
+    ],
+    [
+      3,
+      0,
+      2,
+      1,
+      3,
+      48,
+      0
+    ],
+    [
+      24,
+      2,
+      1,
+      7,
+      0,
+      36,
+      35
+    ],
+    [
+      24,
+      0,
+      0,
+      50,
+      1,
+      25,
+      5
+    ]
+  ],
+  "total_samples": 600
+}
