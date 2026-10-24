@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 /data
+live_app/trained_models
 chainsaw.wav
 *.py[codz]
 *$py.class

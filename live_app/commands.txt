@@ -1,0 +1,11 @@
+mkdir -p ecoast_live_app/trained_models ecoast_live_app/static
+cp /path/to/best_ast_faststride_model.pth ecoast_live_app/trained_models/
+
+
+
+
+
+
+pip install -r requirements.txt
+
+uvicorn app:app --host 127.0.0.1 --port 8000
