@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoAST AI — Acoustic Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* CerbroFit Exact Palette */
+      --bg-canvas: #D8E1E7;
+      --bg-canvas-grad: linear-gradient(135deg, #E6EEF4 0%, #D8E1E7 50%, #C9D6E0 100%);
+      --card-surface: rgba(255, 255, 255, 0.78);
+      --card-solid: #FFFFFF;
+      --card-dark: #131C26;
+      --card-dark-accent: #1B2938;
+      --cobalt-primary: #205989;
+      --cobalt-light: #2E77B5;
+      --slate-indigo: #4D5F90;
+      --warm-taupe: #88776C;
+      --text-main: #131C26;
+      --text-muted: #64748B;
+      --border-glass: rgba(255, 255, 255, 0.65);
+      --shadow-soft: 0 18px 40px -12px rgba(32, 89, 137, 0.12), 0 4px 12px -2px rgba(19, 28, 38, 0.04);
+
+      /* Semantic Alert Accents */
+      --threat-red: #E11D48;
+      --vocal-amber: #D97706;
+      --safe-teal: #0D9488;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-canvas-grad);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding: 1.5rem 2rem;
+      display: flex;
+      gap: 1.75rem;
+      overflow-x: hidden;
+    }
+
+    /* Left Floating Icon Dock (CerbroFit Navigation Style) */
+    .side-dock {
+      width: 72px;
+      background: var(--card-dark);
+      border-radius: var(--radius-pill);
+      padding: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 20px 40px rgba(19, 28, 38, 0.22);
+      flex-shrink: 0;
+      height: calc(100vh - 3rem);
+      position: sticky;
+      top: 1.5rem;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--cobalt-light), var(--cobalt-primary));
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 6px 16px rgba(46, 119, 181, 0.4);
+    }
+
+    .dock-icons {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .dock-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #94A3B8;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .dock-btn.active, .dock-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFFFFF;
+    }
+
+    .dock-status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--warm-taupe);
+      box-shadow: 0 0 0 4px rgba(136, 119, 108, 0.2);
+      transition: all 0.3s ease;
+    }
+    .dock-status-dot.live {
+      background: #10B981;
+      box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.25);
+    }
+
+    /* Main Workspace */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      padding: 0.9rem 1.5rem;
+      border-radius: var(--radius-pill);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .greeting-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .ai-badge {
+      background: rgba(32, 89, 137, 0.1);
+      color: var(--cobalt-primary);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .greeting-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .mic-select {
+      appearance: none;
+      background: var(--card-solid);
+      border: 1px solid rgba(32, 89, 137, 0.15);
+      color: var(--text-main);
+      padding: 0.65rem 1.2rem;
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .action-btn {
+      border: none;
+      padding: 0.7rem 1.4rem;
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .action-btn.start {
+      background: var(--cobalt-primary);
+      color: #FFFFFF;
+      box-shadow: 0 8px 20px -4px rgba(32, 89, 137, 0.45);
+    }
+    .action-btn.start:hover {
+      background: var(--cobalt-light);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.stop {
+      background: var(--threat-red);
+      color: #FFFFFF;
+      box-shadow: 0 8px 20px -4px rgba(225, 29, 72, 0.4);
+    }
+
+    /* Bento Grid Layout */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .left-col, .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .bento-card {
+      background: var(--card-surface);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-xl);
+      padding: 1.65rem;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Dark Obsidian Hero Card (CerbroFit Signature Contrast Widget) */
+    .hero-card {
+      background: linear-gradient(145deg, var(--card-dark) 0%, var(--card-dark-accent) 100%);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 235px;
+      transition: all 0.35s ease;
+    }
+
+    .hero-card.state-threat {
+      background: linear-gradient(145deg, #2A121B 0%, #4C1D2E 100%);
+      border-color: rgba(225, 29, 72, 0.45);
+      box-shadow: 0 20px 45px -10px rgba(225, 29, 72, 0.3);
+    }
+
+    .hero-card.state-vocal {
+      background: linear-gradient(145deg, #1E242B 0%, #2E3846 100%);
+      border-color: rgba(217, 119, 6, 0.45);
+    }
+
+    .hero-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 62%;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      width: fit-content;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-pill);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.1);
+      color: #D8E1E7;
+    }
+
+    .status-chip.alert {
+      background: rgba(225, 29, 72, 0.25);
+      color: #FDA4AF;
+    }
+
+    .hero-prediction {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-sub {
+      color: #94A3B8;
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    /* Circular Radial Gauge (Fitness Ring Style) */
+    .radial-wrap {
+      position: relative;
+      width: 138px;
+      height: 138px;
+      display: grid;
+      place-items: center;
+    }
+
+    .radial-svg {
+      width: 138px;
+      height: 138px;
+      transform: rotate(-90deg);
+    }
+
+    .radial-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 11;
+    }
+
+    .radial-fill {
+      fill: none;
+      stroke: #38BDF8;
+      stroke-width: 11;
+      stroke-linecap: round;
+      stroke-dasharray: 358;
+      stroke-dashoffset: 358;
+      transition: stroke-dashoffset 0.45s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+    }
+
+    .radial-center {
+      position: absolute;
+      text-align: center;
+    }
+
+    .radial-val {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #FFFFFF;
+    }
+
+    .radial-lbl {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    /* Mini KPI Pill Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .kpi-pill {
+      background: var(--card-solid);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      box-shadow: 0 4px 15px rgba(32, 89, 137, 0.05);
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .kpi-value {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--cobalt-primary);
+    }
+
+    /* Card Headers */
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      border-radius: var(--radius-pill);
+      background: rgba(77, 95, 144, 0.1);
+      color: var(--slate-indigo);
+    }
+
+    /* Waveform Visualizer */
+    canvas#waveform {
+      width: 100%;
+      height: 125px;
+      background: linear-gradient(180deg, rgba(216, 225, 231, 0.45) 0%, rgba(255, 255, 255, 0.8) 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(32, 89, 137, 0.12);
+    }
+
+    /* 5-Class Probability Bars (CerbroFit Goal Tracker Style) */
+    .class-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.05rem;
+    }
+
+    .class-card {
+      background: var(--card-solid);
+      padding: 0.95rem 1.15rem;
+      border-radius: 16px;
+      border: 1px solid rgba(32, 89, 137, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .class-card.active-top {
+      border-color: var(--cobalt-primary);
+      box-shadow: 0 8px 20px -6px rgba(32, 89, 137, 0.18);
+      transform: translateX(3px);
+    }
+
+    .class-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .class-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .class-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .class-pct {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--cobalt-primary);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 9px;
+      background: #E2E8F0;
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: var(--radius-pill);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Timeline Feed */
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 175px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .feed-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-solid);
+      padding: 0.75rem 1rem;
+      border-radius: 14px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      border-left: 4px solid var(--cobalt-primary);
+    }
+
+    .feed-item.threat {
+      border-left-color: var(--threat-red);
+      background: #FFF5F7;
+    }
+
+    .feed-time {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 960px) {
+      .bento-grid { grid-template-columns: 1fr; }
+      .side-dock { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CerbroFit Floating Left Icon Dock -->
+  <aside class="side-dock">
+    <div class="brand-logo">EA</div>
+    <div class="dock-icons">
+      <button class="dock-btn active" title="Live Acoustic Monitor">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+      </button>
+      <button class="dock-btn" title="AST 16x16 Analytics">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      </button>
+      <button class="dock-btn" title="Shield Filter (Background & Dog Bark Muted)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </button>
+    </div>
+    <div id="dockDot" class="dock-status-dot" title="Stream Status"></div>
+  </aside>
+
+  <!-- Main Dashboard Workspace -->
+  <div class="workspace">
+
+    <!-- Top Pill Header -->
+    <header class="top-bar">
+      <div class="greeting-group">
+        <span class="ai-badge">AST-16×16 Engine</span>
+        <span class="greeting-title">EcoAST Acoustic Intelligence</span>
+      </div>
+      <div class="controls-group">
+        <select id="micSelect" class="mic-select">
+          <option value="">Default Microphone</option>
+        </select>
+        <button id="toggleBtn" class="action-btn start">
+          <span>▶ Start Sensor</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Bento Grid -->
+    <div class="bento-grid">
+
+      <!-- Left Column -->
+      <div class="left-col">
+
+        <!-- Obsidian Hero Card with Radial Confidence Ring -->
+        <div id="heroCard" class="bento-card hero-card">
+          <div class="hero-info">
+            <div id="statusChip" class="status-chip">STANDBY MODE</div>
+            <div id="predTitle" class="hero-prediction">Sensor Ready</div>
+            <div id="predSub" class="hero-sub">Background nature & dog vocalizations are automatically suppressed.</div>
+          </div>
+
+          <div class="radial-wrap">
+            <svg class="radial-svg" viewBox="0 0 138 138">
+              <circle class="radial-bg" cx="69" cy="69" r="57"></circle>
+              <circle id="radialFill" class="radial-fill" cx="69" cy="69" r="57"></circle>
+            </svg>
+            <div class="radial-center">
+              <div id="confValue" class="radial-val">0%</div>
+              <div class="radial-lbl">Match</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 KPI Metric Pills -->
+        <div class="kpi-row">
+          <div class="kpi-pill">
+            <span class="kpi-label">Signal Energy (RMS)</span>
+            <span id="rmsDisplay" class="kpi-value">0.0000</span>
+          </div>
+          <div class="kpi-pill">
+            <span class="kpi-label">10.24s Buffer Fill</span>
+            <span id="bufferDisplay" class="kpi-value">0%</span>
+          </div>
+          <div class="kpi-pill">
+            <span class="kpi-label">Active Filter</span>
+            <span class="kpi-value" style="color: var(--slate-indigo); font-size: 1.05rem;">5 Target Classes</span>
+          </div>
+        </div>
+
+        <!-- Live Oscilloscope Card -->
+        <div class="bento-card">
+          <div class="card-head">
+            <div class="card-title">Live Acoustic Waveform</div>
+            <span class="card-tag">16,000 Hz PCM Stream</span>
+          </div>
+          <canvas id="waveform" width="580" height="125"></canvas>
+        </div>
+
+      </div>
+
+      <!-- Right Column -->
+      <div class="right-col">
+
+        <!-- 5-Class Target Distribution Card -->
+        <div class="bento-card">
+          <div class="card-head">
+            <div class="card-title">Target Class Telemetry</div>
+            <span class="card-tag">Bg & Dog Filtered</span>
+          </div>
+          <div class="class-list" id="probContainer"></div>
+        </div>
+
+        <!-- Live Event Log Card -->
+        <div class="bento-card" style="flex: 1;">
+          <div class="card-head">
+            <div class="card-title">Detection Activity Feed</div>
+            <span class="card-tag">Real-Time</span>
+          </div>
+          <div class="feed-list" id="detectionLog">
+            <div class="feed-item">
+              <span>System initialized. Select microphone to begin.</span>
+              <span class="feed-time">READY</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // CerbroFit-harmonized class colors
+    const TARGET_CLASSES = [
+      { label: "Sawing & Chainsaw", color: "#E11D48" },
+      { label: "Gunshot & Explosion", color: "#D97706" },
+      { label: "Engine & Vehicle", color: "#205989" },
+      { label: "Wood Chop & Break", color: "#4D5F90" },
+      { label: "Human Vocalization", color: "#88776C" }
+    ];
+
+    const probContainer = document.getElementById("probContainer");
+    TARGET_CLASSES.forEach(cls => {
+      probContainer.innerHTML += `
+        <div class="class-card" id="card-${cls.label}">
+          <div class="class-top">
+            <span class="class-name">
+              <span class="class-dot" style="background:${cls.color}"></span>
+              ${cls.label}
+            </span>
+            <span class="class-pct" id="val-${cls.label}">0.0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="bar-${cls.label}" style="background:${cls.color}"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    let audioCtx = null;
+    let mediaStream = null;
+    let processor = null;
+    let ws = null;
+    let isRunning = false;
+
+    const toggleBtn = document.getElementById("toggleBtn");
+    const micSelect = document.getElementById("micSelect");
+    const dockDot = document.getElementById("dockDot");
+    const canvas = document.getElementById("waveform");
+    const ctx = canvas.getContext("2d");
+    const CIRCUMFERENCE = 358; // 2 * pi * 57
+
+    async function loadMicrophones() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === "audioinput");
+        micSelect.innerHTML = mics.map(
+          (m, idx) => `<option value="${m.deviceId}">${m.label || 'Microphone ' + (idx + 1)}</option>`
+        ).join("");
+      } catch (e) {
+        console.warn("Microphone permission needed to list devices.");
+      }
+    }
+    loadMicrophones();
+
+    function drawWaveform(samples) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Center guide line
+      ctx.strokeStyle = "rgba(32, 89, 137, 0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+
+      // Waveform path in CerbroFit Cobalt (#205989)
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = "#205989";
+      ctx.beginPath();
+
+      const sliceWidth = canvas.width / samples.length;
+      let x = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const y = (0.5 + samples[i] * 1.85) * canvas.height;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx.stroke();
+    }
+
+    function setRadialGauge(percent, colorHex) {
+      const fill = document.getElementById("radialFill");
+      const clamped = Math.max(0, Math.min(100, percent));
+      const offset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
+      fill.style.strokeDashoffset = offset;
+      fill.style.stroke = colorHex;
+      document.getElementById("confValue").textContent = `${Math.round(clamped)}%`;
+    }
+
+    function updateUI(data) {
+      document.getElementById("rmsDisplay").textContent = data.rms.toFixed(4);
+      document.getElementById("bufferDisplay").textContent = `${Math.round((data.buffer_fill || 0) * 100)}%`;
+
+      const heroCard = document.getElementById("heroCard");
+      const statusChip = document.getElementById("statusChip");
+      const predTitle = document.getElementById("predTitle");
+      const predSub = document.getElementById("predSub");
+
+      heroCard.className = "bento-card hero-card";
+      statusChip.className = "status-chip";
+
+      if (data.status === "detected") {
+        const pct = data.confidence * 100;
+        predTitle.textContent = data.display_label;
+
+        if (data.is_threat) {
+          heroCard.classList.add("state-threat");
+          statusChip.classList.add("alert");
+          statusChip.textContent = "⚠ THREAT SIGNATURE";
+          predSub.textContent = "High-priority forest acoustic threat identified.";
+          setRadialGauge(pct, "#FB7185");
+        } else {
+          heroCard.classList.add("state-vocal");
+          statusChip.textContent = "HUMAN VOCALIZATION";
+          predSub.textContent = "Human speech or vocal presence detected.";
+          setRadialGauge(pct, "#FBBF24");
+        }
+
+        const logBox = document.getElementById("detectionLog");
+        const timeStr = new Date().toLocaleTimeString();
+        const entry = document.createElement("div");
+        entry.className = "feed-item" + (data.is_threat ? " threat" : "");
+        entry.innerHTML = `
+          <span>${data.display_label} (${pct.toFixed(1)}%)</span>
+          <span class="feed-time">${timeStr}</span>
+        `;
+        logBox.prepend(entry);
+      } else {
+        statusChip.textContent = data.status === "quiet" ? "STANDBY • QUIET" : "AMBIENT • FILTERED";
+        predTitle.textContent = data.display_label;
+        predSub.textContent = "Listening for target classes (Background & Dog Bark muted).";
+        setRadialGauge(0, "#38BDF8");
+      }
+
+      if (data.probabilities) {
+        TARGET_CLASSES.forEach(cls => {
+          const p = (data.probabilities[cls.label] || 0) * 100;
+          document.getElementById(`val-${cls.label}`).textContent = `${p.toFixed(1)}%`;
+          document.getElementById(`bar-${cls.label}`).style.width = `${Math.min(100, p)}%`;
+
+          const cardEl = document.getElementById(`card-${cls.label}`);
+          if (data.status === "detected" && data.display_label === cls.label) {
+            cardEl.classList.add("active-top");
+          } else {
+            cardEl.classList.remove("active-top");
+          }
+        });
+      }
+    }
+
+    async function startListening() {
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      ws = new WebSocket(`${protocol}://${window.location.host}/ws/audio`);
+      ws.onmessage = (event) => updateUI(JSON.parse(event.data));
+
+      const deviceId = micSelect.value;
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          channelCount: 1,
+          sampleRate: 16000,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const source = audioCtx.createMediaStreamSource(mediaStream);
+      processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (e) => {
+        if (!isRunning) return;
+        const inputData = e.inputBuffer.getChannelData(0);
+        drawWaveform(inputData);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(inputData.buffer);
+        }
+      };
+
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
+
+      isRunning = true;
+      dockDot.classList.add("live");
+      toggleBtn.innerHTML = "<span>⏹ Stop Sensor</span>";
+      toggleBtn.className = "action-btn stop";
+    }
+
+    function stopListening() {
+      isRunning = false;
+      dockDot.classList.remove("live");
+      if (processor) processor.disconnect();
+      if (audioCtx) audioCtx.close();
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+      if (ws) ws.close();
+
+      toggleBtn.innerHTML = "<span>▶ Start Sensor</span>";
+      toggleBtn.className = "action-btn start";
+      document.getElementById("statusChip").textContent = "PAUSED";
+      document.getElementById("predTitle").textContent = "Sensor Paused";
+      setRadialGauge(0, "#38BDF8");
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      if (!isRunning) startListening();
+      else stopListening();
+    });
+  </script>
+</body>
+</html>
