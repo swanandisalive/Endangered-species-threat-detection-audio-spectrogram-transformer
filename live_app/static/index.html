@@ -47,12 +47,12 @@
       overflow-x: hidden;
     }
 
-    /* Left Floating Icon Dock (CerbroFit Navigation Style) */
+    /* Left Floating Icon Dock */
     .side-dock {
       width: 72px;
       background: var(--card-dark);
       border-radius: var(--radius-pill);
-      padding: 1.5rem 0;
+      padding: 1.75rem 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -64,23 +64,10 @@
       top: 1.5rem;
     }
 
-    .brand-logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--cobalt-light), var(--cobalt-primary));
-      display: grid;
-      place-items: center;
-      color: #fff;
-      font-weight: 800;
-      font-size: 1.1rem;
-      box-shadow: 0 6px 16px rgba(46, 119, 181, 0.4);
-    }
-
     .dock-icons {
       display: flex;
       flex-direction: column;
-      gap: 1.1rem;
+      gap: 1.25rem;
     }
 
     .dock-btn {
@@ -238,7 +225,7 @@
       overflow: hidden;
     }
 
-    /* Dark Obsidian Hero Card (CerbroFit Signature Contrast Widget) */
+    /* Dark Hero Card */
     .hero-card {
       background: linear-gradient(145deg, var(--card-dark) 0%, var(--card-dark-accent) 100%);
       color: #FFFFFF;
@@ -301,7 +288,7 @@
       font-weight: 500;
     }
 
-    /* Circular Radial Gauge (Fitness Ring Style) */
+    /* Circular Radial Gauge */
     .radial-wrap {
       position: relative;
       width: 138px;
@@ -417,7 +404,7 @@
       border: 1px solid rgba(32, 89, 137, 0.12);
     }
 
-    /* 5-Class Probability Bars (CerbroFit Goal Tracker Style) */
+    /* 5-Class Probability Bars */
     .class-list {
       display: flex;
       flex-direction: column;
@@ -524,12 +511,17 @@
 </head>
 <body>
 
-  <!-- CerbroFit Floating Left Icon Dock -->
+  <!-- Clean Floating Left Icon Dock (Blue circle removed) -->
   <aside class="side-dock">
-    <div class="brand-logo">EA</div>
     <div class="dock-icons">
       <button class="dock-btn active" title="Live Acoustic Monitor">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+      </button>
+      <button class="dock-btn" title="Acoustic Analytics">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      </button>
+      <button class="dock-btn" title="Threat Protection">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </button>
     </div>
     <div id="dockDot" class="dock-status-dot" title="Stream Status"></div>
@@ -671,6 +663,9 @@
     let processor = null;
     let ws = null;
     let isRunning = false;
+
+    // Log interval configuration (15 seconds)
+    const LOG_INTERVAL_MS = 15000;
     let lastLogTime = 0;
 
     const toggleBtn = document.getElementById("toggleBtn");
@@ -697,7 +692,6 @@
     function drawWaveform(samples) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Center guide line
       ctx.strokeStyle = "rgba(32, 89, 137, 0.12)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -705,7 +699,6 @@
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
 
-      // Waveform path in CerbroFit Cobalt (#205989)
       ctx.lineWidth = 2.2;
       ctx.strokeStyle = "#205989";
       ctx.beginPath();
@@ -759,8 +752,9 @@
           setRadialGauge(pct, "#FBBF24");
         }
 
+        // Throttle log entries to once every 15 seconds
         const currentTime = Date.now();
-        if (currentTime - lastLogTime >= 15000) {
+        if (currentTime - lastLogTime >= LOG_INTERVAL_MS) {
           const logBox = document.getElementById("detectionLog");
           const timeStr = new Date().toLocaleTimeString();
           const entry = document.createElement("div");
@@ -770,6 +764,11 @@
             <span class="feed-time">${timeStr}</span>
           `;
           logBox.prepend(entry);
+
+          // Prevent excessive DOM accumulation
+          if (logBox.children.length > 30) {
+            logBox.removeChild(logBox.lastElementChild);
+          }
 
           lastLogTime = currentTime;
         }
@@ -837,16 +836,17 @@
 
     function stopListening() {
       isRunning = false;
+      lastLogTime = 0; // Reset log throttle timer on stop
       dockDot.classList.remove("live");
       if (processor) processor.disconnect();
       if (audioCtx) audioCtx.close();
       if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
       if (ws) ws.close();
 
-      toggleBtn.innerHTML = "<span>▶ Start Sensor</span>";
+      toggleBtn.innerHTML = "<span>Start Microphone </span>";
       toggleBtn.className = "action-btn start";
       document.getElementById("statusChip").textContent = "PAUSED";
-      document.getElementById("predTitle").textContent = "Sensor Paused";
+      document.getElementById("predTitle").textContent = "Mike Paused";
       setRadialGauge(0, "#38BDF8");
     }
 

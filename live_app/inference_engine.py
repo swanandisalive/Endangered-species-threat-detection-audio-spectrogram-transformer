@@ -1,6 +1,6 @@
 """
 inference_engine.py
-Handles AST-FastStride-16x16 initialization, audio preprocessing, and 5-class threat filtering.
+Handles AST-FastStride-16x16 initialization, audio preprocessing, and direct 5-class inference.
 """
 
 from pathlib import Path
@@ -14,22 +14,16 @@ SAMPLE_RATE = 16000
 TARGET_DURATION = 10.24
 TARGET_SAMPLES = int(SAMPLE_RATE * TARGET_DURATION)  # 163,840 samples
 
-# Full 7-class mapping required to load your saved state_dict
+# 5-class native architecture mapping
 CLASS_TO_IDX = {
-    "Background_Nature": 0,
-    "Sawing_and_Chainsaw": 1,
-    "Gunshot_and_Explosion": 2,
-    "Engine_and_Vehicle": 3,
-    "Wood_Chop_and_Break": 4,
-    "Human_Vocalization": 5,
-    "Dog_Bark": 6,
+    "Sawing_and_Chainsaw": 0,
+    "Gunshot_and_Explosion": 1,
+    "Engine_and_Vehicle": 2,
+    "Wood_Chop_and_Break": 3,
+    "Human_Vocalization": 4,
 }
 IDX_TO_CLASS = {v: k for k, v in CLASS_TO_IDX.items()}
 NUM_CLASSES = len(CLASS_TO_IDX)
-
-# Classes to suppress from triggering predictions
-IGNORED_INDICES = {0, 6}  # 0: Background_Nature, 6: Dog_Bark
-ACTIVE_INDICES = [1, 2, 3, 4, 5]
 
 DISPLAY_LABELS = {
     "Sawing_and_Chainsaw": "Sawing & Chainsaw",
@@ -48,7 +42,7 @@ HIGH_PRIORITY_THREATS = {
 
 
 def build_ast_faststride_16x16_model():
-    """Builds the 16x16 non-overlapping patch AST architecture (514 tokens)."""
+    """Builds the 16x16 non-overlapping patch AST architecture (514 tokens) for 5 classes."""
     checkpoint = "MIT/ast-finetuned-audioset-10-10-0.4593"
     pretrained_model = ASTForAudioClassification.from_pretrained(checkpoint)
 
@@ -93,7 +87,7 @@ def build_ast_faststride_16x16_model():
 class LiveASTPredictor:
     def __init__(
         self,
-        weights_path: str = "trained_models/best_ast_faststride_model.pth",
+        weights_path: str = "trained_models/5_classes_best_ast_faststride_model.pth",
         confidence_threshold: float = 0.35,
         rms_silence_threshold: float = 0.008,
     ):
@@ -101,7 +95,9 @@ class LiveASTPredictor:
         self.confidence_threshold = confidence_threshold
         self.rms_silence_threshold = rms_silence_threshold
 
-        print(f"[INFO] Initializing AST-FastStride-16x16 on {self.device}...")
+        print(
+            f"[INFO] Initializing AST-FastStride-16x16 (5 classes) on {self.device}..."
+        )
         self.extractor = ASTFeatureExtractor.from_pretrained(
             "MIT/ast-finetuned-audioset-10-10-0.4593"
         )
@@ -111,14 +107,14 @@ class LiveASTPredictor:
         if not path.exists():
             raise FileNotFoundError(
                 f"Model weights not found at '{path.resolve()}'. "
-                "Place 'best_ast_faststride_model.pth' inside 'trained_models/'."
+                f"Please ensure '{path.name}' is located inside '{path.parent}'."
             )
 
         state_dict = torch.load(str(path), map_location=self.device, weights_only=True)
         self.model.load_state_dict(state_dict)
         self.model.to(self.device)
         self.model.eval()
-        print("[INFO] Model loaded and ready for live inference!")
+        print("[INFO] 5-class model loaded and ready for live inference!")
 
     def preprocess_waveform(self, audio_np: np.ndarray) -> tuple[torch.Tensor, float]:
         """Applies exact training pipeline preprocessing: Pad/Crop, RMS norm, Pre-emphasis."""
@@ -134,7 +130,7 @@ class LiveASTPredictor:
             pad = TARGET_SAMPLES - num_samples
             waveform = F.pad(waveform, (pad, 0), mode="constant", value=0.0)
 
-        # Exact RMS Normalization + Pre-emphasis from preprocessing_pipeline.py
+        # RMS Normalization + Pre-emphasis
         waveform = waveform - waveform.mean()
         rms = torch.sqrt(torch.mean(waveform.pow(2)) + 1e-8)
         waveform = torch.tanh(waveform * (0.1 / rms))
@@ -159,57 +155,43 @@ class LiveASTPredictor:
                 "is_threat": False,
                 "rms": round(raw_rms, 4),
                 "probabilities": {
-                    DISPLAY_LABELS[IDX_TO_CLASS[i]]: 0.0 for i in ACTIVE_INDICES
+                    DISPLAY_LABELS[IDX_TO_CLASS[i]]: 0.0 for i in range(NUM_CLASSES)
                 },
             }
 
         # 2. Run AST-16x16 Forward Pass
         outputs = self.model(input_values=input_values)
-        logits = outputs.logits[0]  # Shape: (7,)
-        raw_probs = F.softmax(logits, dim=-1).cpu().numpy()
+        logits = outputs.logits[0]  # Shape: (5,)
+        probs = F.softmax(logits, dim=-1).cpu().numpy()
 
-        top_raw_idx = int(np.argmax(raw_probs))
+        top_idx = int(np.argmax(probs))
+        predicted_class = IDX_TO_CLASS[top_idx]
+        top_prob = float(probs[top_idx])
 
-        # Extract probabilities for the 5 active target classes
-        active_probs_raw = {
-            IDX_TO_CLASS[i]: float(raw_probs[i]) for i in ACTIVE_INDICES
-        }
-
-        # Best target class among the 5 allowed classes
-        best_active_cls = max(active_probs_raw, key=active_probs_raw.get)
-        best_active_prob = active_probs_raw[best_active_cls]
-
-        # Re-normalize probabilities across the 5 target classes for clean UI bars
-        active_sum = sum(active_probs_raw.values()) + 1e-8
         ui_probs = {
-            DISPLAY_LABELS[cls]: round(
-                (prob / active_sum) if top_raw_idx not in IGNORED_INDICES else prob, 4
-            )
-            for cls, prob in active_probs_raw.items()
+            DISPLAY_LABELS[IDX_TO_CLASS[i]]: round(float(probs[i]), 4)
+            for i in range(NUM_CLASSES)
         }
 
-        # 3. Suppress Background_Nature (0) and Dog_Bark (6) or low-confidence noise
-        if (
-            top_raw_idx in IGNORED_INDICES
-            or best_active_prob < self.confidence_threshold
-        ):
+        # 3. Suppress low-confidence noise
+        if top_prob < self.confidence_threshold:
             return {
                 "status": "suppressed",
                 "predicted_class": None,
-                "display_label": "Ambient / Ignored Sound",
-                "confidence": round(best_active_prob, 4),
+                "display_label": "Ambient / Unsure Sound",
+                "confidence": round(top_prob, 4),
                 "is_threat": False,
                 "rms": round(raw_rms, 4),
                 "probabilities": ui_probs,
             }
 
-        # 4. Valid Target Class Detected
+        # 4. Valid Threat / Active Class Detected
         return {
             "status": "detected",
-            "predicted_class": best_active_cls,
-            "display_label": DISPLAY_LABELS[best_active_cls],
-            "confidence": round(ui_probs[DISPLAY_LABELS[best_active_cls]], 4),
-            "is_threat": best_active_cls in HIGH_PRIORITY_THREATS,
+            "predicted_class": predicted_class,
+            "display_label": DISPLAY_LABELS[predicted_class],
+            "confidence": round(top_prob, 4),
+            "is_threat": predicted_class in HIGH_PRIORITY_THREATS,
             "rms": round(raw_rms, 4),
             "probabilities": ui_probs,
         }

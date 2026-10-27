@@ -10,13 +10,14 @@ import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from inference_engine import SAMPLE_RATE, TARGET_SAMPLES, LiveASTPredictor
 
 app = FastAPI(title="EcoAST Live Acoustic Monitor")
 
 # Load the model once at startup
 predictor = LiveASTPredictor(
-    weights_path="trained_models/best_ast_faststride_model.pth",
+    weights_path="trained_models/5_classes_best_ast_faststride_model.pth",
     confidence_threshold=0.35,
     rms_silence_threshold=0.008,
 )
