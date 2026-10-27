@@ -531,12 +531,6 @@
       <button class="dock-btn active" title="Live Acoustic Monitor">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
       </button>
-      <button class="dock-btn" title="AST 16x16 Analytics">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-      </button>
-      <button class="dock-btn" title="Shield Filter (Background & Dog Bark Muted)">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </button>
     </div>
     <div id="dockDot" class="dock-status-dot" title="Stream Status"></div>
   </aside>
@@ -677,6 +671,7 @@
     let processor = null;
     let ws = null;
     let isRunning = false;
+    let lastLogTime = 0;
 
     const toggleBtn = document.getElementById("toggleBtn");
     const micSelect = document.getElementById("micSelect");
@@ -764,15 +759,20 @@
           setRadialGauge(pct, "#FBBF24");
         }
 
-        const logBox = document.getElementById("detectionLog");
-        const timeStr = new Date().toLocaleTimeString();
-        const entry = document.createElement("div");
-        entry.className = "feed-item" + (data.is_threat ? " threat" : "");
-        entry.innerHTML = `
-          <span>${data.display_label} (${pct.toFixed(1)}%)</span>
-          <span class="feed-time">${timeStr}</span>
-        `;
-        logBox.prepend(entry);
+        const currentTime = Date.now();
+        if (currentTime - lastLogTime >= 15000) {
+          const logBox = document.getElementById("detectionLog");
+          const timeStr = new Date().toLocaleTimeString();
+          const entry = document.createElement("div");
+          entry.className = "feed-item" + (data.is_threat ? " threat" : "");
+          entry.innerHTML = `
+            <span>${data.display_label} (${pct.toFixed(1)}%)</span>
+            <span class="feed-time">${timeStr}</span>
+          `;
+          logBox.prepend(entry);
+
+          lastLogTime = currentTime;
+        }
       } else {
         statusChip.textContent = data.status === "quiet" ? "STANDBY • QUIET" : "AMBIENT • FILTERED";
         predTitle.textContent = data.display_label;
