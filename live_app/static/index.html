@@ -1,859 +1,675 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EcoAST AI — Acoustic Intelligence Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      /* CerbroFit Exact Palette */
-      --bg-canvas: #D8E1E7;
-      --bg-canvas-grad: linear-gradient(135deg, #E6EEF4 0%, #D8E1E7 50%, #C9D6E0 100%);
-      --card-surface: rgba(255, 255, 255, 0.78);
-      --card-solid: #FFFFFF;
-      --card-dark: #131C26;
-      --card-dark-accent: #1B2938;
-      --cobalt-primary: #205989;
-      --cobalt-light: #2E77B5;
-      --slate-indigo: #4D5F90;
-      --warm-taupe: #88776C;
-      --text-main: #131C26;
-      --text-muted: #64748B;
-      --border-glass: rgba(255, 255, 255, 0.65);
-      --shadow-soft: 0 18px 40px -12px rgba(32, 89, 137, 0.12), 0 4px 12px -2px rgba(19, 28, 38, 0.04);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoAST — Real-Time Acoustic Threat Detection</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent-threat: #ef4444;
+            --accent-safe: #10b981;
+            --accent-warn: #f59e0b;
+        }
 
-      /* Semantic Alert Accents */
-      --threat-red: #E11D48;
-      --vocal-amber: #D97706;
-      --safe-teal: #0D9488;
-      --radius-xl: 28px;
-      --radius-lg: 20px;
-      --radius-pill: 999px;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
 
-    body {
-      background: var(--bg-canvas-grad);
-      color: var(--text-main);
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
-      padding: 1.5rem 2rem;
-      display: flex;
-      gap: 1.75rem;
-      overflow-x: hidden;
-    }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
 
-    /* Left Floating Icon Dock */
-    .side-dock {
-      width: 72px;
-      background: var(--card-dark);
-      border-radius: var(--radius-pill);
-      padding: 1.75rem 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 20px 40px rgba(19, 28, 38, 0.22);
-      flex-shrink: 0;
-      height: calc(100vh - 3rem);
-      position: sticky;
-      top: 1.5rem;
-    }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    .dock-icons {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
+        .badge-live {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--accent-threat);
+            border: 1px solid var(--accent-threat);
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
 
-    .dock-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: none;
-      background: transparent;
-      color: #94A3B8;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      transition: all 0.25s ease;
-    }
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
 
-    .dock-btn.active, .dock-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #FFFFFF;
-    }
+        button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
 
-    .dock-status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--warm-taupe);
-      box-shadow: 0 0 0 4px rgba(136, 119, 108, 0.2);
-      transition: all 0.3s ease;
-    }
-    .dock-status-dot.live {
-      background: #10B981;
-      box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.25);
-    }
+        .btn-start {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-start:hover {
+            background-color: var(--primary-hover);
+        }
 
-    /* Main Workspace */
-    .workspace {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-    }
+        .btn-stop {
+            background-color: var(--bg-input);
+            color: var(--text-muted);
+        }
+        .btn-stop:hover:not(:disabled) {
+            color: white;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-    /* Top Bar */
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--card-surface);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border-glass);
-      padding: 0.9rem 1.5rem;
-      border-radius: var(--radius-pill);
-      box-shadow: var(--shadow-soft);
-    }
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            flex-grow: 1;
+        }
 
-    .greeting-group {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-    .ai-badge {
-      background: rgba(32, 89, 137, 0.1);
-      color: var(--cobalt-primary);
-      font-weight: 700;
-      font-size: 0.75rem;
-      padding: 0.4rem 0.85rem;
-      border-radius: var(--radius-pill);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .greeting-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
+        /* Canvas visualizers */
+        canvas {
+            width: 100%;
+            height: 180px;
+            background-color: #0b0f19;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
 
-    .controls-group {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
+        /* Status Banner */
+        .status-box {
+            padding: 16px;
+            border-radius: 8px;
+            background-color: rgba(51, 65, 85, 0.4);
+            border-left: 4px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .mic-select {
-      appearance: none;
-      background: var(--card-solid);
-      border: 1px solid rgba(32, 89, 137, 0.15);
-      color: var(--text-main);
-      padding: 0.65rem 1.2rem;
-      border-radius: var(--radius-pill);
-      font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      outline: none;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
+        .status-box.threat {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-left-color: var(--accent-threat);
+        }
 
-    .action-btn {
-      border: none;
-      padding: 0.7rem 1.4rem;
-      border-radius: var(--radius-pill);
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+        .status-box.ambient {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-left-color: var(--accent-safe);
+        }
 
-    .action-btn.start {
-      background: var(--cobalt-primary);
-      color: #FFFFFF;
-      box-shadow: 0 8px 20px -4px rgba(32, 89, 137, 0.45);
-    }
-    .action-btn.start:hover {
-      background: var(--cobalt-light);
-      transform: translateY(-1px);
-    }
+        .status-box.activity {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-left-color: var(--accent-warn);
+        }
 
-    .action-btn.stop {
-      background: var(--threat-red);
-      color: #FFFFFF;
-      box-shadow: 0 8px 20px -4px rgba(225, 29, 72, 0.4);
-    }
+        .status-main {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
 
-    /* Bento Grid Layout */
-    .bento-grid {
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      gap: 1.5rem;
-    }
+        .status-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
 
-    .left-col, .right-col {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
+        /* Progress Bars */
+        .prob-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
 
-    .bento-card {
-      background: var(--card-surface);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid var(--border-glass);
-      border-radius: var(--radius-xl);
-      padding: 1.65rem;
-      box-shadow: var(--shadow-soft);
-      position: relative;
-      overflow: hidden;
-    }
+        .prob-section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-top: 4px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+        }
 
-    /* Dark Hero Card */
-    .hero-card {
-      background: linear-gradient(145deg, var(--card-dark) 0%, var(--card-dark-accent) 100%);
-      color: #FFFFFF;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      min-height: 235px;
-      transition: all 0.35s ease;
-    }
+        .prob-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
-    .hero-card.state-threat {
-      background: linear-gradient(145deg, #2A121B 0%, #4C1D2E 100%);
-      border-color: rgba(225, 29, 72, 0.45);
-      box-shadow: 0 20px 45px -10px rgba(225, 29, 72, 0.3);
-    }
+        .prob-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
 
-    .hero-card.state-vocal {
-      background: linear-gradient(145deg, #1E242B 0%, #2E3846 100%);
-      border-color: rgba(217, 119, 6, 0.45);
-    }
+        .progress-bar-bg {
+            height: 10px;
+            background-color: var(--bg-input);
+            border-radius: 5px;
+            overflow: hidden;
+        }
 
-    .hero-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      max-width: 62%;
-    }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: var(--primary);
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 5px;
+        }
 
-    .status-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      width: fit-content;
-      padding: 0.35rem 0.85rem;
-      border-radius: var(--radius-pill);
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      background: rgba(255, 255, 255, 0.1);
-      color: #D8E1E7;
-    }
+        .progress-bar-fill.high {
+            background-color: var(--accent-threat);
+        }
 
-    .status-chip.alert {
-      background: rgba(225, 29, 72, 0.25);
-      color: #FDA4AF;
-    }
+        .progress-bar-fill.warn {
+            background-color: var(--accent-warn);
+        }
 
-    .hero-prediction {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-    }
+        .progress-bar-fill.safe {
+            background-color: var(--accent-safe);
+        }
 
-    .hero-sub {
-      color: #94A3B8;
-      font-size: 0.88rem;
-      font-weight: 500;
-    }
+        /* Logs table */
+        .logs-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    /* Circular Radial Gauge */
-    .radial-wrap {
-      position: relative;
-      width: 138px;
-      height: 138px;
-      display: grid;
-      place-items: center;
-    }
+        .log-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-safe);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
 
-    .radial-svg {
-      width: 138px;
-      height: 138px;
-      transform: rotate(-90deg);
-    }
+        .log-entry.threat {
+            border-left: 3px solid var(--accent-threat);
+        }
 
-    .radial-bg {
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 11;
-    }
+        .log-entry.activity {
+            border-left: 3px solid var(--accent-warn);
+        }
 
-    .radial-fill {
-      fill: none;
-      stroke: #38BDF8;
-      stroke-width: 11;
-      stroke-linecap: round;
-      stroke-dasharray: 358;
-      stroke-dashoffset: 358;
-      transition: stroke-dashoffset 0.45s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
-    }
-
-    .radial-center {
-      position: absolute;
-      text-align: center;
-    }
-
-    .radial-val {
-      font-size: 1.45rem;
-      font-weight: 800;
-      color: #FFFFFF;
-    }
-
-    .radial-lbl {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #94A3B8;
-      font-weight: 600;
-    }
-
-    /* Mini KPI Pill Row */
-    .kpi-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-
-    .kpi-pill {
-      background: var(--card-solid);
-      border-radius: var(--radius-lg);
-      padding: 1.1rem 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-      box-shadow: 0 4px 15px rgba(32, 89, 137, 0.05);
-    }
-
-    .kpi-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .kpi-value {
-      font-size: 1.3rem;
-      font-weight: 800;
-      color: var(--cobalt-primary);
-    }
-
-    /* Card Headers */
-    .card-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.2rem;
-    }
-
-    .card-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .card-tag {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.3rem 0.75rem;
-      border-radius: var(--radius-pill);
-      background: rgba(77, 95, 144, 0.1);
-      color: var(--slate-indigo);
-    }
-
-    /* Waveform Visualizer */
-    canvas#waveform {
-      width: 100%;
-      height: 125px;
-      background: linear-gradient(180deg, rgba(216, 225, 231, 0.45) 0%, rgba(255, 255, 255, 0.8) 100%);
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(32, 89, 137, 0.12);
-    }
-
-    /* 5-Class Probability Bars */
-    .class-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1.05rem;
-    }
-
-    .class-card {
-      background: var(--card-solid);
-      padding: 0.95rem 1.15rem;
-      border-radius: 16px;
-      border: 1px solid rgba(32, 89, 137, 0.08);
-      display: flex;
-      flex-direction: column;
-      gap: 0.55rem;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .class-card.active-top {
-      border-color: var(--cobalt-primary);
-      box-shadow: 0 8px 20px -6px rgba(32, 89, 137, 0.18);
-      transform: translateX(3px);
-    }
-
-    .class-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .class-name {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .class-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-
-    .class-pct {
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: var(--cobalt-primary);
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 9px;
-      background: #E2E8F0;
-      border-radius: var(--radius-pill);
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      border-radius: var(--radius-pill);
-      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    /* Timeline Feed */
-    .feed-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.65rem;
-      max-height: 175px;
-      overflow-y: auto;
-      padding-right: 0.25rem;
-    }
-
-    .feed-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--card-solid);
-      padding: 0.75rem 1rem;
-      border-radius: 14px;
-      font-size: 0.84rem;
-      font-weight: 600;
-      border-left: 4px solid var(--cobalt-primary);
-    }
-
-    .feed-item.threat {
-      border-left-color: var(--threat-red);
-      background: #FFF5F7;
-    }
-
-    .feed-time {
-      color: var(--text-muted);
-      font-size: 0.76rem;
-      font-weight: 600;
-    }
-
-    @media (max-width: 960px) {
-      .bento-grid { grid-template-columns: 1fr; }
-      .side-dock { display: none; }
-    }
-  </style>
+        .log-time {
+            color: var(--text-muted);
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+    </style>
 </head>
 <body>
 
-  <!-- Clean Floating Left Icon Dock (Blue circle removed) -->
-  <aside class="side-dock">
-    <div class="dock-icons">
-      <button class="dock-btn active" title="Live Acoustic Monitor">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-      </button>
-      <button class="dock-btn" title="Acoustic Analytics">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-      </button>
-      <button class="dock-btn" title="Threat Protection">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </button>
-    </div>
-    <div id="dockDot" class="dock-status-dot" title="Stream Status"></div>
-  </aside>
-
-  <!-- Main Dashboard Workspace -->
-  <div class="workspace">
-
-    <!-- Top Pill Header -->
-    <header class="top-bar">
-      <div class="greeting-group">
-        <span class="ai-badge">AST-16×16 Engine</span>
-        <span class="greeting-title">EcoAST Acoustic Intelligence</span>
-      </div>
-      <div class="controls-group">
-        <select id="micSelect" class="mic-select">
-          <option value="">Default Microphone</option>
-        </select>
-        <button id="toggleBtn" class="action-btn start">
-          <span>▶ Start Sensor</span>
-        </button>
-      </div>
+    <header>
+        <h1>🌿 EcoAST Live Acoustic Monitor <span class="badge-live" id="streamStatus">Offline</span></h1>
+        <div class="controls">
+            <button class="btn-start" id="startBtn">Start Monitoring</button>
+            <button class="btn-stop" id="stopBtn" disabled>Stop</button>
+        </div>
     </header>
 
-    <!-- Main Bento Grid -->
-    <div class="bento-grid">
-
-      <!-- Left Column -->
-      <div class="left-col">
-
-        <!-- Obsidian Hero Card with Radial Confidence Ring -->
-        <div id="heroCard" class="bento-card hero-card">
-          <div class="hero-info">
-            <div id="statusChip" class="status-chip">STANDBY MODE</div>
-            <div id="predTitle" class="hero-prediction">Sensor Ready</div>
-            <div id="predSub" class="hero-sub">Background nature & dog vocalizations are automatically suppressed.</div>
-          </div>
-
-          <div class="radial-wrap">
-            <svg class="radial-svg" viewBox="0 0 138 138">
-              <circle class="radial-bg" cx="69" cy="69" r="57"></circle>
-              <circle id="radialFill" class="radial-fill" cx="69" cy="69" r="57"></circle>
-            </svg>
-            <div class="radial-center">
-              <div id="confValue" class="radial-val">0%</div>
-              <div class="radial-lbl">Match</div>
+    <div class="grid">
+        <!-- Visualizations and Real-time Status -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div class="card">
+                <div class="card-title">
+                    <span>Real-Time Acoustic Spectrogram (Waterfall)</span>
+                    <span id="bufferStatus" style="font-size: 0.75rem; color: var(--text-muted);">Buffer: 0%</span>
+                </div>
+                <canvas id="spectrogramCanvas"></canvas>
             </div>
-          </div>
-        </div>
 
-        <!-- 3 KPI Metric Pills -->
-        <div class="kpi-row">
-          <div class="kpi-pill">
-            <span class="kpi-label">Signal Energy (RMS)</span>
-            <span id="rmsDisplay" class="kpi-value">0.0000</span>
-          </div>
-          <div class="kpi-pill">
-            <span class="kpi-label">10.24s Buffer Fill</span>
-            <span id="bufferDisplay" class="kpi-value">0%</span>
-          </div>
-          <div class="kpi-pill">
-            <span class="kpi-label">Active Filter</span>
-            <span class="kpi-value" style="color: var(--slate-indigo); font-size: 1.05rem;">5 Target Classes</span>
-          </div>
-        </div>
-
-        <!-- Live Oscilloscope Card -->
-        <div class="bento-card">
-          <div class="card-head">
-            <div class="card-title">Live Acoustic Waveform</div>
-            <span class="card-tag">16,000 Hz PCM Stream</span>
-          </div>
-          <canvas id="waveform" width="580" height="125"></canvas>
-        </div>
-
-      </div>
-
-      <!-- Right Column -->
-      <div class="right-col">
-
-        <!-- 5-Class Target Distribution Card -->
-        <div class="bento-card">
-          <div class="card-head">
-            <div class="card-title">Target Class Telemetry</div>
-            <span class="card-tag">Bg & Dog Filtered</span>
-          </div>
-          <div class="class-list" id="probContainer"></div>
-        </div>
-
-        <!-- Live Event Log Card -->
-        <div class="bento-card" style="flex: 1;">
-          <div class="card-head">
-            <div class="card-title">Detection Activity Feed</div>
-            <span class="card-tag">Real-Time</span>
-          </div>
-          <div class="feed-list" id="detectionLog">
-            <div class="feed-item">
-              <span>System initialized. Select microphone to begin.</span>
-              <span class="feed-time">READY</span>
+            <div class="card">
+                <div class="card-title">Latest Classifier Verdict</div>
+                <div class="status-box" id="statusBar">
+                    <div>
+                        <div class="status-main" id="statusLabel">Microphone Inactive</div>
+                        <div class="status-sub" id="statusSub">Press 'Start Monitoring' to stream audio</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.1rem; font-weight: 700;" id="confValue">0.0%</div>
+                        <div class="status-sub" id="rmsValue">RMS: 0.0000</div>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <div class="card" style="flex-grow: 1;">
+                <div class="card-title">
+                    <span>15-Second Detection History</span>
+                    <span id="logTimerText" style="font-size: 0.75rem; color: var(--text-muted);">Updates every 15s</span>
+                </div>
+                <div class="logs-container" id="logContainer">
+                    <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 20px;">
+                        No logs recorded yet.
+                    </div>
+                </div>
+            </div>
         </div>
 
-      </div>
+        <!-- Real-Time 6-Class Probabilities -->
+        <div class="card">
+            <div class="card-title">Live Class Probabilities (6 Classes)</div>
+            <div class="prob-group">
+                <div class="prob-section-label">High-Priority Threats</div>
 
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Sawing & Chainsaw</span>
+                        <span id="prob-val-Sawing">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill high" id="prob-bar-Sawing"></div>
+                    </div>
+                </div>
+
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Gunshot & Explosion</span>
+                        <span id="prob-val-Gunshot">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill high" id="prob-bar-Gunshot"></div>
+                    </div>
+                </div>
+
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Engine & Vehicle</span>
+                        <span id="prob-val-Engine">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill high" id="prob-bar-Engine"></div>
+                    </div>
+                </div>
+
+                <div class="prob-section-label">Human Activity</div>
+
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Human Vocalization</span>
+                        <span id="prob-val-Human">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill warn" id="prob-bar-Human"></div>
+                    </div>
+                </div>
+
+                <div class="prob-section-label">Ambient / Noise</div>
+
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Background / Nature</span>
+                        <span id="prob-val-Background">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill safe" id="prob-bar-Background"></div>
+                    </div>
+                </div>
+
+                <div class="prob-item">
+                    <div class="prob-header">
+                        <span>Fan / Wind Noise</span>
+                        <span id="prob-val-Fan">0.0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill safe" id="prob-bar-Fan"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted);">
+                Audio sampled at 16 kHz with peak-energy windowing, RMS tanh normalization, and pre-emphasis evaluated on AST-FastStride-16x16.
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    // CerbroFit-harmonized class colors
-    const TARGET_CLASSES = [
-      { label: "Sawing & Chainsaw", color: "#E11D48" },
-      { label: "Gunshot & Explosion", color: "#D97706" },
-      { label: "Engine & Vehicle", color: "#205989" },
-      { label: "Wood Chop & Break", color: "#4D5F90" },
-      { label: "Human Vocalization", color: "#88776C" }
-    ];
+    <script>
+        const TARGET_SAMPLE_RATE = 16000;
+        let audioCtx = null;
+        let mediaStream = null;
+        let processor = null;
+        let analyser = null;
+        let websocket = null;
+        let isRunning = false;
+        let animationId = null;
 
-    const probContainer = document.getElementById("probContainer");
-    TARGET_CLASSES.forEach(cls => {
-      probContainer.innerHTML += `
-        <div class="class-card" id="card-${cls.label}">
-          <div class="class-top">
-            <span class="class-name">
-              <span class="class-dot" style="background:${cls.color}"></span>
-              ${cls.label}
-            </span>
-            <span class="class-pct" id="val-${cls.label}">0.0%</span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill" id="bar-${cls.label}" style="background:${cls.color}"></div>
-          </div>
-        </div>
-      `;
-    });
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const streamStatus = document.getElementById("streamStatus");
+        const bufferStatus = document.getElementById("bufferStatus");
+        const logTimerText = document.getElementById("logTimerText");
+        const statusBar = document.getElementById("statusBar");
+        const statusLabel = document.getElementById("statusLabel");
+        const statusSub = document.getElementById("statusSub");
+        const confValue = document.getElementById("confValue");
+        const rmsValue = document.getElementById("rmsValue");
+        const logContainer = document.getElementById("logContainer");
 
-    let audioCtx = null;
-    let mediaStream = null;
-    let processor = null;
-    let ws = null;
-    let isRunning = false;
+        const specCanvas = document.getElementById("spectrogramCanvas");
+        const specCtx = specCanvas.getContext("2d");
 
-    // Log interval configuration (15 seconds)
-    const LOG_INTERVAL_MS = 15000;
-    let lastLogTime = 0;
+        function resizeCanvas() {
+            specCanvas.width = specCanvas.offsetWidth;
+            specCanvas.height = specCanvas.offsetHeight;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
 
-    const toggleBtn = document.getElementById("toggleBtn");
-    const micSelect = document.getElementById("micSelect");
-    const dockDot = document.getElementById("dockDot");
-    const canvas = document.getElementById("waveform");
-    const ctx = canvas.getContext("2d");
-    const CIRCUMFERENCE = 358; // 2 * pi * 57
+        // Exact mapping to DISPLAY_LABELS in inference_engine.py
+        const probMapping = {
+            "Sawing & Chainsaw": { bar: "prob-bar-Sawing", val: "prob-val-Sawing" },
+            "Gunshot & Explosion": { bar: "prob-bar-Gunshot", val: "prob-val-Gunshot" },
+            "Engine & Vehicle": { bar: "prob-bar-Engine", val: "prob-val-Engine" },
+            "Human Vocalization": { bar: "prob-bar-Human", val: "prob-val-Human" },
+            "Background / Nature": { bar: "prob-bar-Background", val: "prob-val-Background" },
+            "Fan / Wind Noise": { bar: "prob-bar-Fan", val: "prob-val-Fan" }
+        };
 
-    async function loadMicrophones() {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const mics = devices.filter(d => d.kind === "audioinput");
-        micSelect.innerHTML = mics.map(
-          (m, idx) => `<option value="${m.deviceId}">${m.label || 'Microphone ' + (idx + 1)}</option>`
-        ).join("");
-      } catch (e) {
-        console.warn("Microphone permission needed to list devices.");
-      }
-    }
-    loadMicrophones();
+        // Downsample audio buffer to 16000 Hz for AST processing
+        function downsampleBuffer(buffer, inputRate, outputRate) {
+            if (inputRate === outputRate) return buffer;
+            const ratio = inputRate / outputRate;
+            const newLength = Math.round(buffer.length / ratio);
+            const result = new Float32Array(newLength);
+            let offsetResult = 0;
+            let offsetBuffer = 0;
 
-    function drawWaveform(samples) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = "rgba(32, 89, 137, 0.12)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height / 2);
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-
-      ctx.lineWidth = 2.2;
-      ctx.strokeStyle = "#205989";
-      ctx.beginPath();
-
-      const sliceWidth = canvas.width / samples.length;
-      let x = 0;
-      for (let i = 0; i < samples.length; i++) {
-        const y = (0.5 + samples[i] * 1.85) * canvas.height;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-        x += sliceWidth;
-      }
-      ctx.stroke();
-    }
-
-    function setRadialGauge(percent, colorHex) {
-      const fill = document.getElementById("radialFill");
-      const clamped = Math.max(0, Math.min(100, percent));
-      const offset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
-      fill.style.strokeDashoffset = offset;
-      fill.style.stroke = colorHex;
-      document.getElementById("confValue").textContent = `${Math.round(clamped)}%`;
-    }
-
-    function updateUI(data) {
-      document.getElementById("rmsDisplay").textContent = data.rms.toFixed(4);
-      document.getElementById("bufferDisplay").textContent = `${Math.round((data.buffer_fill || 0) * 100)}%`;
-
-      const heroCard = document.getElementById("heroCard");
-      const statusChip = document.getElementById("statusChip");
-      const predTitle = document.getElementById("predTitle");
-      const predSub = document.getElementById("predSub");
-
-      heroCard.className = "bento-card hero-card";
-      statusChip.className = "status-chip";
-
-      if (data.status === "detected") {
-        const pct = data.confidence * 100;
-        predTitle.textContent = data.display_label;
-
-        if (data.is_threat) {
-          heroCard.classList.add("state-threat");
-          statusChip.classList.add("alert");
-          statusChip.textContent = "⚠ THREAT SIGNATURE";
-          predSub.textContent = "High-priority forest acoustic threat identified.";
-          setRadialGauge(pct, "#FB7185");
-        } else {
-          heroCard.classList.add("state-vocal");
-          statusChip.textContent = "HUMAN VOCALIZATION";
-          predSub.textContent = "Human speech or vocal presence detected.";
-          setRadialGauge(pct, "#FBBF24");
+            while (offsetResult < result.length) {
+                const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+                let accum = 0, count = 0;
+                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+                result[offsetResult] = count > 0 ? accum / count : 0;
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+            return result;
         }
 
-        // Throttle log entries to once every 15 seconds
-        const currentTime = Date.now();
-        if (currentTime - lastLogTime >= LOG_INTERVAL_MS) {
-          const logBox = document.getElementById("detectionLog");
-          const timeStr = new Date().toLocaleTimeString();
-          const entry = document.createElement("div");
-          entry.className = "feed-item" + (data.is_threat ? " threat" : "");
-          entry.innerHTML = `
-            <span>${data.display_label} (${pct.toFixed(1)}%)</span>
-            <span class="feed-time">${timeStr}</span>
-          `;
-          logBox.prepend(entry);
+        async function startMonitoring() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
-          // Prevent excessive DOM accumulation
-          if (logBox.children.length > 30) {
-            logBox.removeChild(logBox.lastElementChild);
-          }
+                const source = audioCtx.createMediaStreamSource(mediaStream);
 
-          lastLogTime = currentTime;
+                // Analyser for real-time 60 FPS waterfall spectrogram
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.4;
+                source.connect(analyser);
+
+                // ScriptProcessorNode for streaming raw float32 audio chunks to WebSocket
+                processor = audioCtx.createScriptProcessor(4096, 1, 1);
+                source.connect(processor);
+                processor.connect(audioCtx.destination);
+
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                websocket = new WebSocket(`${protocol}//${window.location.host}/ws/audio`);
+                websocket.binaryType = "arraybuffer";
+
+                websocket.onopen = () => {
+                    streamStatus.textContent = "Live";
+                    streamStatus.style.borderColor = "var(--accent-safe)";
+                    streamStatus.style.color = "var(--accent-safe)";
+                    streamStatus.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
+                };
+
+                websocket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleInferenceResult(data);
+                };
+
+                websocket.onclose = () => {
+                    if (isRunning) stopMonitoring();
+                };
+
+                processor.onaudioprocess = (e) => {
+                    if (!isRunning || !websocket || websocket.readyState !== WebSocket.OPEN) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const downsampled = downsampleBuffer(inputData, audioCtx.sampleRate, TARGET_SAMPLE_RATE);
+                    websocket.send(downsampled.buffer);
+                };
+
+                isRunning = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                renderSpectrogram();
+
+            } catch (err) {
+                console.error("Microphone access error:", err);
+                alert("Failed to initialize microphone: " + err.message);
+            }
         }
-      } else {
-        statusChip.textContent = data.status === "quiet" ? "STANDBY • QUIET" : "AMBIENT • FILTERED";
-        predTitle.textContent = data.display_label;
-        predSub.textContent = "Listening for target classes (Background & Dog Bark muted).";
-        setRadialGauge(0, "#38BDF8");
-      }
 
-      if (data.probabilities) {
-        TARGET_CLASSES.forEach(cls => {
-          const p = (data.probabilities[cls.label] || 0) * 100;
-          document.getElementById(`val-${cls.label}`).textContent = `${p.toFixed(1)}%`;
-          document.getElementById(`bar-${cls.label}`).style.width = `${Math.min(100, p)}%`;
+        function stopMonitoring() {
+            isRunning = false;
+            if (animationId) cancelAnimationFrame(animationId);
 
-          const cardEl = document.getElementById(`card-${cls.label}`);
-          if (data.status === "detected" && data.display_label === cls.label) {
-            cardEl.classList.add("active-top");
-          } else {
-            cardEl.classList.remove("active-top");
-          }
-        });
-      }
-    }
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+            if (processor) processor.disconnect();
+            if (analyser) analyser.disconnect();
+            if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+            if (audioCtx) audioCtx.close();
 
-    async function startListening() {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      ws = new WebSocket(`${protocol}://${window.location.host}/ws/audio`);
-      ws.onmessage = (event) => updateUI(JSON.parse(event.data));
+            streamStatus.textContent = "Offline";
+            streamStatus.style.borderColor = "var(--accent-threat)";
+            streamStatus.style.color = "var(--accent-threat)";
+            streamStatus.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
 
-      const deviceId = micSelect.value;
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            statusLabel.textContent = "Microphone Inactive";
+            statusSub.textContent = "Press 'Start Monitoring' to stream audio";
+            statusBar.className = "status-box";
+            bufferStatus.textContent = "Buffer: 0%";
+            logTimerText.textContent = "Updates every 15s";
         }
-      });
 
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-      const source = audioCtx.createMediaStreamSource(mediaStream);
-      processor = audioCtx.createScriptProcessor(4096, 1, 1);
+        // Real-time Spectrogram Rendering (60 FPS)
+        const freqData = new Uint8Array(256);
+        function renderSpectrogram() {
+            if (!isRunning) return;
 
-      processor.onaudioprocess = (e) => {
-        if (!isRunning) return;
-        const inputData = e.inputBuffer.getChannelData(0);
-        drawWaveform(inputData);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(inputData.buffer);
+            analyser.getByteFrequencyData(freqData);
+
+            // Shift existing canvas left by 2px
+            specCtx.drawImage(specCanvas, -2, 0);
+
+            // Draw new frequency strip on right edge
+            const stripX = specCanvas.width - 2;
+            const height = specCanvas.height;
+            const binHeight = height / freqData.length;
+
+            for (let i = 0; i < freqData.length; i++) {
+                const val = freqData[i];
+                const y = height - (i * binHeight);
+
+                const r = val > 128 ? 255 : (val * 2);
+                const g = val > 180 ? (val - 180) * 3 : 20;
+                const b = val < 128 ? val * 2 : 255 - val;
+
+                specCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                specCtx.fillRect(stripX, y, 2, binHeight + 1);
+            }
+
+            animationId = requestAnimationFrame(renderSpectrogram);
         }
-      };
 
-      source.connect(processor);
-      processor.connect(audioCtx.destination);
+        function handleInferenceResult(data) {
+            // Update buffer fill and 15s countdown indicator
+            if (data.buffer_fill !== undefined) {
+                bufferStatus.textContent = `Buffer: ${Math.round(data.buffer_fill * 100)}%`;
+            }
+            if (data.next_log_in !== undefined) {
+                logTimerText.textContent = `Next log in ${data.next_log_in.toFixed(1)}s`;
+            }
 
-      isRunning = true;
-      dockDot.classList.add("live");
-      toggleBtn.innerHTML = "<span>⏹ Stop Sensor</span>";
-      toggleBtn.className = "action-btn stop";
-    }
+            // 1. REAL-TIME: Always update current status box & confidence values
+            const confPct = (data.confidence * 100).toFixed(1);
+            confValue.textContent = `${confPct}%`;
+            rmsValue.textContent = `RMS: ${data.rms.toFixed(4)}`;
 
-    function stopListening() {
-      isRunning = false;
-      lastLogTime = 0; // Reset log throttle timer on stop
-      dockDot.classList.remove("live");
-      if (processor) processor.disconnect();
-      if (audioCtx) audioCtx.close();
-      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-      if (ws) ws.close();
+            if (data.status === "detected") {
+                statusLabel.textContent = data.display_label;
+                if (data.is_threat) {
+                    statusSub.textContent = "⚠️ Immediate Threat Detected!";
+                    statusBar.className = "status-box threat";
+                } else {
+                    statusSub.textContent = "👤 Non-critical Human Activity Detected";
+                    statusBar.className = "status-box activity";
+                }
+            } else if (data.status === "quiet") {
+                statusLabel.textContent = "Listening... (Quiet)";
+                statusSub.textContent = "Awaiting acoustic events";
+                statusBar.className = "status-box";
+            } else {
+                statusLabel.textContent = data.display_label || "Ambient / Ignored";
+                statusSub.textContent = "Background / wind noise filtered";
+                statusBar.className = "status-box ambient";
+            }
 
-      toggleBtn.innerHTML = "<span>Start Microphone </span>";
-      toggleBtn.className = "action-btn start";
-      document.getElementById("statusChip").textContent = "PAUSED";
-      document.getElementById("predTitle").textContent = "Mike Paused";
-      setRadialGauge(0, "#38BDF8");
-    }
+            // 2. REAL-TIME: Always update all 6 probability progress bars
+            if (data.probabilities) {
+                for (const [cls, prob] of Object.entries(data.probabilities)) {
+                    if (probMapping[cls]) {
+                        const pct = (prob * 100).toFixed(1);
+                        document.getElementById(probMapping[cls].val).textContent = `${pct}%`;
+                        document.getElementById(probMapping[cls].bar).style.width = `${pct}%`;
+                    }
+                }
+            }
 
-    toggleBtn.addEventListener("click", () => {
-      if (!isRunning) startListening();
-      else stopListening();
-    });
-  </script>
+            // 3. 15-SECOND INTERVAL: Append to the event log every 15 seconds when should_log is True
+            if (data.should_log) {
+                appendLogEntry({
+                    time: new Date().toLocaleTimeString(),
+                    label: data.display_label,
+                    confidence: `${confPct}%`,
+                    isThreat: data.is_threat,
+                    status: data.status
+                });
+            }
+        }
+
+        function appendLogEntry({ time, label, confidence, isThreat, status }) {
+            // Remove empty placeholder on first log
+            if (
+                logContainer.children.length === 1 &&
+                logContainer.children[0].tagName === "DIV" &&
+                !logContainer.children[0].classList.contains("log-entry")
+            ) {
+                logContainer.innerHTML = "";
+            }
+
+            const row = document.createElement("div");
+            if (isThreat) {
+                row.className = "log-entry threat";
+            } else if (status === "detected") {
+                row.className = "log-entry activity";
+            } else {
+                row.className = "log-entry";
+            }
+
+            const badgeColor = isThreat
+                ? "var(--accent-threat)"
+                : (status === "detected" ? "var(--accent-warn)" : "var(--text-muted)");
+
+            row.innerHTML = `
+                <div>
+                    <span style="font-weight: 600;">${label}</span>
+                    <span class="log-time" style="margin-left: 8px;">${time}</span>
+                </div>
+                <div>
+                    <span style="color: ${badgeColor}; font-weight: 600;">${confidence}</span>
+                </div>
+            `;
+
+            logContainer.prepend(row);
+
+            // Cap logs to the last 25 entries
+            if (logContainer.children.length > 25) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        startBtn.addEventListener("click", startMonitoring);
+        stopBtn.addEventListener("click", stopMonitoring);
+    </script>
 </body>
 </html>
